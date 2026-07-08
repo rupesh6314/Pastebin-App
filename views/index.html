@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>QuickPaste - Share Text Instantly</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📝 QuickPaste</h1>
+      <p>Share text instantly with a link</p>
+    </div>
+
+    <form id="pasteForm">
+      <div class="form-group">
+        <label for="content">Your Text</label>
+        <textarea id="content" rows="10" placeholder="Paste your text here..."></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="expiresIn">Expiration</label>
+          <select id="expiresIn">
+            <option value="1h">1 Hour</option>
+            <option value="1d">1 Day</option>
+            <option value="7d">7 Days</option>
+            <option value="30d">30 Days</option>
+            <option value="">Never</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="maxViews">Max Views</label>
+          <input type="number" id="maxViews" placeholder="Leave empty for unlimited" min="1">
+        </div>
+      </div>
+
+      <button type="submit" id="submitBtn">Create Paste</button>
+    </form>
+
+    <div id="result" style="display: none;">
+      <h3>✅ Paste Created!</h3>
+      <div class="link-container">
+        <input type="text" id="pasteLink" readonly>
+        <button onclick="copyLink()" class="button small">Copy</button>
+      </div>
+      <div class="metadata-info" id="metadataInfo"></div>
+      <a href="/" class="button">Create Another</a>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('pasteForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const content = document.getElementById('content').value.trim();
+      if (!content) {
+        alert('Please enter some text');
+        return;
+      }
+
+      const expiresIn = document.getElementById('expiresIn').value;
+      const maxViews = document.getElementById('maxViews').value;
+
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.textContent = 'Creating...';
+      submitBtn.disabled = true;
+
+      try {
+        const response = await fetch('/api/paste', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            content,
+            expiresIn: expiresIn || null,
+            maxViews: maxViews ? parseInt(maxViews) : null
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to create paste');
+        }
+
+        document.getElementById('pasteLink').value = data.link;
+        
+        let metadata = [];
+        if (data.expires_at) {
+          metadata.push(`Expires: ${new Date(data.expires_at).toLocaleString()}`);
+        }
+        if (data.max_views) {
+          metadata.push(`Max views: ${data.max_views}`);
+        }
+        document.getElementById('metadataInfo').textContent = metadata.join(' • ');
+        
+        document.getElementById('result').style.display = 'block';
+        document.getElementById('pasteForm').style.display = 'none';
+      } catch (error) {
+        alert('Error: ' + error.message);
+      } finally {
+        submitBtn.textContent = 'Create Paste';
+        submitBtn.disabled = false;
+      }
+    });
+
+    function copyLink() {
+      const linkInput = document.getElementById('pasteLink');
+      linkInput.select();
+      navigator.clipboard.writeText(linkInput.value).then(() => {
+        alert('Link copied to clipboard!');
+      });
+    }
+  </script>
+</body>
+</html>
