@@ -17,9 +17,9 @@ const viewRoutes = require('./routes/view');
 app.use('/api/paste', pasteRoutes);
 app.use('/', viewRoutes);
 
-// Serve static HTML
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'index.html'));
+
+app.get('/p/:id', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'view.html'));
 });
 
 // Initialize database and start server

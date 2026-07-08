@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paste</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    /* Minimal override for the view page */
+    .content pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .metadata span {
+      background: #f0f0f0;
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin-right: 10px;
+      display: inline-block;
+    }
+    .error {
+      color: #dc3545;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="loading">Loading paste...</div>
+    <div id="pasteContent" style="display: none;">
+      <div class="header">
+        <h1>📋 Paste</h1>
+        <div id="metadata" class="metadata"></div>
+      </div>
+      <div class="content">
+        <pre id="contentText"></pre>
+      </div>
+      <div class="actions">
+        <a href="/" class="button">New Paste</a>
+        <button onclick="copyContent()" class="button">Copy</button>
+      </div>
+    </div>
+    <div id="errorMessage" style="display: none;">
+      <h1>❌ Paste Not Found</h1>
+      <p>The paste you're looking for has expired or doesn't exist.</p>
+      <a href="/" class="button">Create New Paste</a>
+    </div>
+  </div>
+
+  <script>
+    // Get the paste ID from the URL path (e.g., /p/abc123)
+    const pathSegments = window.location.pathname.split('/');
+    const pasteId = pathSegments[pathSegments.length - 1];
+
+    async function loadPaste() {
+      try {
+        const response = await fetch(`/api/pastes/${pasteId}`);
+        if (!response.ok) {
+          if (response.status === 404) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'block';
+          } else {
+            throw new Error(`Server error: ${response.status}`);
+          }
+          return;
+        }
+
+        const data = await response.json();
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('pasteContent').style.display = 'block';
+
+        // Display content (safely)
+        document.getElementById('contentText').textContent = data.content;
+
+        // Build metadata
+        const metadataDiv = document.getElementById('metadata');
+        let metaHtml = `<span>ID: ${pasteId}</span>`;
+        metaHtml += `<span>Views: ${data.remaining_views !== null ? data.remaining_views : '∞'}</span>`;
+        if (data.expires_at) {
+          const localTime = new Date(data.expires_at).toLocaleString();
+          metaHtml += `<span>Expires: ${localTime}</span>`;
+        }
+        metadataDiv.innerHTML = metaHtml;
+
+        // Also update page title
+        document.title = `Paste - ${pasteId}`;
+      } catch (error) {
+        console.error('Error loading paste:', error);
+        document.getElementById('loading').textContent = 'Error loading paste. Please try again.';
+      }
+    }
+
+    function copyContent() {
+      const content = document.getElementById('contentText').textContent;
+      navigator.clipboard.writeText(content).then(() => {
+        alert('Copied to clipboard!');
+      }).catch(() => {
+        // Fallback for older browsers
+        const textarea = document.createElement('textarea');
+        textarea.value = content;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert('Copied to clipboard!');
+      });
+    }
+
+    // Load the paste
+    loadPaste();
+  </script>
+</body>
+</html>
